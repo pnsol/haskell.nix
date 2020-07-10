@@ -101,6 +101,14 @@ in rec {
   checks = pkgs.recurseIntoAttrs (builtins.mapAttrs
     (_: d: haskellLib.check d)
       (lib.filterAttrs (_: d: d.config.doCheck) components.tests));
+
+  coverageReport = haskellLib.coverageReport {
+    inherit ghc src;
+    inherit (package.identifier) name;
+    testDerivations = lib.attrValues (lib.filterAttrs (_: d: d.config.doCheck) components.tests);
+    toCoverDerivations = [ components.library ];
+  };
+
   inherit (package) identifier detailLevel isLocal;
   inherit setup cabalFile;
   isHaskell = true;

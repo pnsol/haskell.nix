@@ -1,7 +1,8 @@
-{ stdenv, lib, haskellLib, srcOnly }:
-drv:
+{ stdenv, lib, haskellLib, srcOnly, withCoverage ? false }:
+d:
 
 let
+  drv = if withCoverage then d.covered else d;
   component = drv.config;
 
 # This derivation can be used to execute test component.
@@ -27,11 +28,15 @@ in stdenv.mkDerivation ({
   # If doCheck or doCrossCheck are false we may still build this
   # component and we want it to quietly succeed.
   buildPhase = ''
-    touch $out
+    mkdir $out
 
     runHook preCheck
 
-    ${toString component.testWrapper} ${drv}/bin/${drv.exeName} ${lib.concatStringsSep " " component.testFlags} | tee $out
+    ${toString component.testWrapper} ${drv}/bin/${drv.exeName} ${lib.concatStringsSep " " component.testFlags} | tee $out/test
+
+    ${lib.optionalString withCoverage ''
+      find . -iname '*.tix' -exec cp {} $out/ \;
+    ''}
 
     runHook postCheck
   '';

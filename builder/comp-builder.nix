@@ -52,6 +52,9 @@ let self =
 , enableExecutableProfiling ? component.enableExecutableProfiling
 , profilingDetail ? component.profilingDetail
 
+# Coverage
+, doCoverage ? component.doCoverage
+
 # Data
 , enableSeparateDataOutput ? component.enableSeparateDataOutput
 
@@ -119,6 +122,7 @@ let
       (enableFeature enableExecutableProfiling "executable-profiling")
       (enableFeature enableStatic "static")
       (enableFeature enableShared "shared")
+      (enableFeature doCoverage "coverage")
     ] ++ lib.optionals (stdenv.hostPlatform.isMusl && (haskellLib.isExecutableType componentId)) [
       # These flags will make sure the resulting executable is statically linked.
       # If it uses other libraries it may be necessary for to add more
@@ -220,6 +224,7 @@ let
       inherit configFiles executableToolDepends cleanSrc exeName;
       env = shellWrappers;
       profiled = self (drvArgs // { enableLibraryProfiling = true; });
+      covered = self (drvArgs // { doCoverage = true; });
     } // lib.optionalAttrs (haskellLib.isLibrary componentId) ({
         inherit haddock;
         inherit (haddock) haddockDir; # This is null if `doHaddock = false`
@@ -354,6 +359,10 @@ let
             find "$libdir" -iname '*.dll' -exec ln -s {} $out/bin \;
           fi
         done
+      '')
+      + (lib.optionalString doCoverage ''
+        mkdir -p $out/share
+        cp -r dist/hpc $out/share
       '')
       }
       runHook postInstall

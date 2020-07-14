@@ -1,8 +1,7 @@
-{ stdenv, lib, haskellLib, srcOnly, withCoverage ? false }:
-d:
+{ stdenv, lib, haskellLib, srcOnly }:
+drv:
 
 let
-  drv = if withCoverage then d.covered else d;
   component = drv.config;
 
 # This derivation can be used to execute test component.
@@ -34,9 +33,8 @@ in stdenv.mkDerivation ({
 
     ${toString component.testWrapper} ${drv}/bin/${drv.exeName} ${lib.concatStringsSep " " component.testFlags} | tee $out/test
 
-    ${lib.optionalString withCoverage ''
-      find . -iname '*.tix' -exec cp {} $out/ \;
-    ''}
+    # Copy over tix files, if they exist
+    find . -iname '*.tix' -exec cp {} $out/ \;
 
     runHook postCheck
   '';

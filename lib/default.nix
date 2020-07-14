@@ -239,11 +239,6 @@ in {
     inherit stdenv lib haskellLib srcOnly;
   };
 
-  checkWithCoverage = import ./check.nix {
-    inherit stdenv lib haskellLib srcOnly;
-    withCoverage = true;
-  };
-
   # Do coverage of a project
   coverageReport = import ./cover.nix {
     inherit stdenv lib haskellLib;

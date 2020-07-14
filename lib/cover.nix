@@ -7,7 +7,7 @@ let
   tests = buildWithCoverage testDerivations;
   covering = buildWithCoverage toCoverDerivations;
 
-  coverageChecks = builtins.map (d: haskellLib.checkWithCoverage d) (builtins.filter (d: d.config.doCheck) tests);
+  coverageChecks = builtins.map (d: haskellLib.check d) (builtins.filter (d: d.config.doCheck) tests);
 
 in stdenv.mkDerivation {
   name = (name + "-coverage");

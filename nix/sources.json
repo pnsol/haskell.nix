@@ -1,4 +1,16 @@
 {
+    "cq": {
+        "branch": "master",
+        "description": "Query cabal files.",
+        "homepage": null,
+        "owner": "sevanspowell",
+        "repo": "cq",
+        "rev": "5898a6914d18c78894ca91116949c2364e057ca7",
+        "sha256": "1ngs0vl0rk8gcbl4jkhcxmbddlj5ysly8s0c7j149180q9cbi4q7",
+        "type": "tarball",
+        "url": "https://github.com/sevanspowell/cq/archive/5898a6914d18c78894ca91116949c2364e057ca7.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "niv": {
         "branch": "master",
         "description": "Easy dependency management for Nix projects",

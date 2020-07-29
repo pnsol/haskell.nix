@@ -107,6 +107,7 @@ in rec {
     inherit (package.identifier) name;
     testDerivations = lib.attrValues (lib.filterAttrs (_: d: d.config.doCheck) components.tests);
     toCoverDerivations = [ components.library ];
+    inherit pkgs;
   };
 
   inherit (package) identifier detailLevel isLocal;

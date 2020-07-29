@@ -111,7 +111,7 @@ let
           doCoverage = mkOption {
             description = "Enable production of test coverage reports.";
             type = bool;
-            default = (def.Coverage or false);
+            default = (def.doCoverage or false);
           };
           dontPatchELF = mkOption {
             description = "If set, the patchelf command is not used to remove unnecessary RPATH entries. Only applies to Linux.";

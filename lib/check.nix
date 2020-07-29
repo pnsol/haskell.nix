@@ -34,7 +34,7 @@ in stdenv.mkDerivation ({
     ${toString component.testWrapper} ${drv}/bin/${drv.exeName} ${lib.concatStringsSep " " component.testFlags} | tee $out/test
 
     # Copy over tix files, if they exist
-    find . -iname '*.tix' -exec cp {} $out/ \;
+    find . -iname '*.tix' -exec mkdir -p $out/share/hpc/tix/${drv.exeName} \; -exec cp {} $out/share/hpc/tix/${drv.exeName}/ \;
 
     runHook postCheck
   '';

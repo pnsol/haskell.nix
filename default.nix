@@ -27,7 +27,11 @@ let haskellNix = {
           }
         )]
         else []
-    );
+    ) ++ [
+      (final: prev: {
+        cq = (import sources.cq {}).cq.components.exes.cq;
+      })
+    ];
     allOverlays = import ./overlays args;
     nixpkgsArgs = { inherit config overlays system; };
     pkgs = import sources.nixpkgs-default nixpkgsArgs;

@@ -244,7 +244,7 @@ in {
     inherit stdenv lib haskellLib pkgs;
   };
 
-  projectCoverageReport = import ./cover-files-only.nix {
+  projectCoverageReport = import ./cover-project.nix {
     inherit stdenv lib haskellLib pkgs;
   };
 

@@ -1,68 +1,9 @@
 { pkgs, stdenv, lib, haskellLib }:
 
-projects:
+project:
 
 let
-  buildWithCoverage = builtins.map (d: d.covered);
-  runCheck = builtins.map (d: haskellLib.check d);
-
-  # drvs' = buildWithCoverage drvs;
-  # drvSources = builtins.map (d: d.src.outPath) drvs;
-  # testsWithCoverage = buildWithCoverage tests;
-  # checks' = runCheck testsWithCoverage;
-
-  projects' = builtins.map (p:
-    rec {
-      name = p.name;
-      drv = p.drv.covered;
-      testsWithCoverage = buildWithCoverage p.tests;
-      checks = runCheck testsWithCoverage;
-    }
-  ) projects;
-
-  doThis = p: ''
-    mkdir -p $out/share/hpc/mix/${p.name}
-    mkdir -p $out/share/hpc/tix/${p.name}
-
-    for drv in ${lib.concatStringsSep " " ([ p.drv ] ++ p.testsWithCoverage)}; do
-      # Copy over mix files
-      local mixDir=$(findMixDir $drv)
-      cp -R $mixDir/* $out/share/hpc/mix/${p.name}
-    done
-
-    # Exclude test modules from tix file
-    excludedModules=('"Main"')
-    local drv=${p.drv.src.outPath}
-    # Exclude test modules
-    local cabalFile=$(findCabalFile $drv)
-    for module in $(${pkgs.cq}/bin/cq $cabalFile testModules | ${pkgs.jq}/bin/jq ".[]"); do
-      excludedModules+=("$module")
-    done
-    echo "''${excludedModules[@]}"
-
-    hpcSumCmdBase=("hpc" "sum" "--union")
-    for exclude in ''${excludedModules[@]}; do
-      hpcSumCmdBase+=("--exclude=$exclude")
-    done
-
-    for check in ${lib.concatStringsSep " " p.checks}; do
-      pushd $check/share/hpc/tix
-      
-      for tixFileRel in $(find . -iwholename "*.tix" -type f); do
-        set -x
-        mkdir -p $out/share/hpc/tix/${p.name}/$(dirname $tixFileRel)
-        cp $tixFileRel $out/share/hpc/tix/${p.name}/$tixFileRel.pre-exclude
-        
-        local hpcSumCmd=("''${hpcSumCmdBase[@]}")
-        hpcSumCmd+=("--output=$out/share/hpc/tix/${p.name}/$tixFileRel" "$tixFileRel")
-        echo "''${hpcSumCmd[@]}"
-        eval "''${hpcSumCmd[@]}"
-      done
-
-      popd
-    done
-  '';
-
+  coverageReports = lib.mapAttrsToList (n: package: package.coverageReport) project;
 in
 stdenv.mkDerivation {
   name = "coverage-report";
@@ -84,9 +25,11 @@ stdenv.mkDerivation {
       find $1 -iname "*.cabal" -print -quit
     }
 
-    # Copy over the mix and tix files for each package
-    ${lib.concatStringsSep "\n" (builtins.map doThis projects')}
-
+    
+    echo "Project coverage reports are: "
+    for report in ${lib.concatStringsSep " " coverageReports}; do
+      echo $report
+    done
   '';
 
     # # Generate combined tix file for all packages

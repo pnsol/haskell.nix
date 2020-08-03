@@ -1,83 +1,91 @@
-{ stdenv, lib, haskellLib }:
-{ ghc, pkgs, name, src, testDerivations, toCoverDerivations }:
+{ stdenv, lib, haskellLib, pkgs }:
+
+{ name, library, tests }:
 
 let
   buildWithCoverage = builtins.map (d: d.covered);
+  runCheck = builtins.map (d: haskellLib.check d);
 
-  tests = buildWithCoverage testDerivations;
-  covering = buildWithCoverage toCoverDerivations;
-
-  coverageChecks = builtins.map (d: haskellLib.check d) (builtins.filter (d: d.config.doCheck) tests);
+  libraryCovered    = library.covered;
+  testsWithCoverage = buildWithCoverage tests;
+  checks            = runCheck testsWithCoverage;
 
 in stdenv.mkDerivation {
-  name = (name + "-coverage");
-
-  inherit src;
+  name = (name + "-coverage-report");
 
   phases = ["buildPhase"];
 
-  buildInputs = (with pkgs; [
-    git
-  ]) ++ (with pkgs.haskellPackages; [
-    hpc-coveralls
-  ]);
+  buildInputs = (with pkgs; [ ghc cq jq ]);
 
-  # If doCheck or doCrossCheck are false we may still build this
-  # component and we want it to quietly succeed.
   buildPhase = ''
-    runHook preCheck
-
-    mkdir $out
-    mkdir -p $out/share/hpc
-    mkdir -p $out/share/hpc/mix
-    mkdir -p $out/share/hpc/tix
-
     findMixDir() {
       find $1 -iwholename "*/hpc/vanilla/mix" -exec find {} -maxdepth 1 -type d -iwholename "*/mix/*" \; -quit
     }
 
-    tixFile=all.tix
+    findCabalFile() {
+      find $1 -iname "*.cabal" -print -quit
+    }
 
-    cabalFile=$(find $src -iname "*.cabal" -print -quit)
-    excludedModules=("Main")
-    for module in $(${pkgs.cq}/bin/cq $cabalFile testModules | ${pkgs.jq}/bin/jq ".[]"); do
+    mkdir -p $out/share/hpc/mix/${name}
+    mkdir -p $out/share/hpc/tix/${name}
+
+    for drv in ${lib.concatStringsSep " " ([ libraryCovered ] ++ testsWithCoverage)}; do
+      # Copy over mix files
+      local mixDir=$(findMixDir $drv)
+      cp -R $mixDir/* $out/share/hpc/mix/${name}
+    done
+
+    # Exclude test modules from tix file
+    excludedModules=('"Main"')
+    local drv=${libraryCovered.src.outPath}
+    # Exclude test modules
+    local cabalFile=$(findCabalFile $drv)
+    for module in $(cq $cabalFile testModules | jq ".[]"); do
       excludedModules+=("$module")
     done
-    echo "done"
     echo "''${excludedModules[@]}"
 
-    hpcSumCmd=("${ghc}/bin/hpc" "sum" "--union" "--output=$tixFile")
-    for check in ${lib.concatStringsSep " " coverageChecks}; do
-      for tix in $(find $check -name '*.tix' -print); do
-        hpcSumCmd+=("$tix")
+    hpcSumCmdBase=("hpc" "sum" "--union")
+    for exclude in ''${excludedModules[@]}; do
+      hpcSumCmdBase+=("--exclude=$exclude")
+    done
+
+    for check in ${lib.concatStringsSep " " checks}; do
+      pushd $check/share/hpc/tix
+      
+      # Find each tix file (relative to check directory above)
+      for tixFileRel in $(find . -iwholename "*.tix" -type f); do
+        # Output tix file as-is with suffix
+        mkdir -p $out/share/hpc/tix/${name}/$(dirname $tixFileRel)
+        cp $tixFileRel $out/share/hpc/tix/${name}/$tixFileRel.pre-exclude
+        
+        # Output tix file with test modules excluded
+        local hpcSumCmd=("''${hpcSumCmdBase[@]}")
+        hpcSumCmd+=("--output=$out/share/hpc/tix/${name}/$tixFileRel" "$tixFileRel")
+        echo "''${hpcSumCmd[@]}"
+        eval "''${hpcSumCmd[@]}"
       done
-      cp -R $check/share/hpc/tix/* $out/share/hpc/tix/
+
+      popd
     done
-    for exclude in ''${excludedModules[@]}; do
-      hpcSumCmd+=("--exclude=$exclude")
-    done
-    echo "''${hpcSumCmd[@]}"
-    eval "''${hpcSumCmd[@]}"
 
-    hpcMarkupCmd=("${ghc}/bin/hpc" "markup" "$tixFile" "--destdir=$out" "--srcdir=$src")
-    for component in ${lib.concatStringsSep " " (tests ++ covering)}; do
-      echo "COMPONENT IS $component"
-      local mixDir=$(findMixDir $component)
+    # hpcMarkupCmd=("hpc" "markup" "$tixFile" "--destdir=$out" "--srcdir=$src")
+    # for component in ; do
+    #   echo "COMPONENT IS $component"
+    #   local mixDir=$(findMixDir $component)
 
-      hpcMarkupCmd+=("--hpcdir=$mixDir")
-      cp -R $mixDir $out/share/hpc/mix
-    done
-    for exclude in ''${excludedModules[@]}; do
-      hpcMarkupCmd+=("--exclude=$exclude")
-    done
-    echo "''${hpcMarkupCmd[@]}"
-    eval "''${hpcMarkupCmd[@]}"
+    #   hpcMarkupCmd+=("--hpcdir=$mixDir")
+    #   cp -R $mixDir $out/share/hpc/mix
+    # done
+    # for exclude in ''${excludedModules[@]}; do
+    #   hpcMarkupCmd+=("--exclude=$exclude")
+    # done
+    # echo "''${hpcMarkupCmd[@]}"
+    # eval "''${hpcMarkupCmd[@]}"
 
-    mkdir -p $out/share/hpc/tix/all
-    cp $tixFile $out/share/hpc/tix/all/all.tix
+    # mkdir -p $out/share/hpc/tix/all
+    # cp $tixFile $out/share/hpc/tix/all/all.tix
 
-    cp -r $src/* $out
-
-    runHook postCheck
+    # cp -r $src/* $out
   '';
 }

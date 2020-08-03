@@ -473,11 +473,13 @@ final: prev: {
                               { compiler.nix-name = args.compiler-nix-name; };
                   extra-hackages = args.extra-hackages or [];
                 };
-            in addProjectAndPackageAttrs {
+            in addProjectAndPackageAttrs rec {
               inherit (pkg-set.config) hsPkgs;
               inherit pkg-set;
               plan-nix = callProjectResults.projectNix;
               inherit (callProjectResults) index-state;
+
+              coverageReport = projectCoverageReport (haskellLib.selectProjectPackages hsPkgs);
             };
 
         # Take `hsPkgs` from the `rawProject` and update all the packages and
@@ -509,7 +511,7 @@ final: prev: {
 
         cabalProject = args: let p = cabalProject' args;
             in p.hsPkgs // {
-              inherit (p) plan-nix;
+              inherit (p) plan-nix coverageReport;
               # Provide `nix-shell -A shells.ghc` for users migrating from the reflex-platform.
               # But we should encourage use of `nix-shell -A shellFor`
               shells.ghc = p.hsPkgs.shellFor {};
@@ -581,6 +583,19 @@ final: prev: {
               shells.ghc = p.hsPkgs.shellFor {};
             } // final.lib.optionalAttrs (p ? stack-nix) { inherit (p) stack-nix; }
               // final.lib.optionalAttrs (p ? plan-nix ) { inherit (p) plan-nix;  };
+
+        projectCoverageReport = packages:
+          let
+            # TODO what if package doesn't have library and/or tests?
+            projectInfo = with final.lib;
+              mapAttrsToList (n: p: {
+                  name = n;
+                  drv = p.components.library;
+                  tests = filter isDerivation (attrValues p.components.tests);
+                }
+              ) packages;
+          in
+            haskellLib.coverageReport' projectInfo;
 
         # Like `cabalProject'`, but for building the GHCJS compiler.
         # This is exposed to allow GHCJS developers to work on the GHCJS

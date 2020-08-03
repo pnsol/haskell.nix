@@ -244,6 +244,10 @@ in {
     inherit stdenv lib haskellLib;
   };
 
+  coverageReport' = import ./cover-files-only.nix {
+    inherit stdenv lib haskellLib pkgs;
+  };
+
   # Use `isCrossHost` to identify when we are cross compiling and
   # the code we are producing will not run on the build system
   # without an emulator.

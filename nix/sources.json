@@ -5,10 +5,10 @@
         "homepage": null,
         "owner": "sevanspowell",
         "repo": "cq",
-        "rev": "5898a6914d18c78894ca91116949c2364e057ca7",
-        "sha256": "1ngs0vl0rk8gcbl4jkhcxmbddlj5ysly8s0c7j149180q9cbi4q7",
+        "rev": "2d76b33c36a8d1b96bd9aff750bed2323f850c47",
+        "sha256": "1jqvahb2qwkms0x80abidpwk6bj260ayvp2gc0nkwwvvcx2r9nqs",
         "type": "tarball",
-        "url": "https://github.com/sevanspowell/cq/archive/5898a6914d18c78894ca91116949c2364e057ca7.tar.gz",
+        "url": "https://github.com/sevanspowell/cq/archive/2d76b33c36a8d1b96bd9aff750bed2323f850c47.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "niv": {

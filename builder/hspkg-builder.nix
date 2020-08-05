@@ -103,7 +103,7 @@ in rec {
       (lib.filterAttrs (_: d: d.config.doCheck) components.tests));
 
   coverageReport = haskellLib.coverageReport {
-    inherit (package.identifier) name;
+    inherit (package.identifier) name version;
     inherit (components) library;
     tests = lib.attrValues (lib.filterAttrs (_: d: d.config.doCheck) components.tests);
   };

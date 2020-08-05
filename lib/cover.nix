@@ -1,6 +1,6 @@
 { stdenv, lib, haskellLib, pkgs }:
 
-{ name, library, tests }:
+{ name, version, library, tests }:
 
 let
   buildWithCoverage = builtins.map (d: d.covered);
@@ -10,8 +10,10 @@ let
   testsWithCoverage = buildWithCoverage tests;
   checks            = runCheck testsWithCoverage;
 
+  identifier = name + "-" + version;
+
 in stdenv.mkDerivation {
-  name = (name + "-coverage-report");
+  name = (identifier + "-coverage-report");
 
   phases = ["buildPhase"];
 
@@ -26,66 +28,69 @@ in stdenv.mkDerivation {
       find $1 -iname "*.cabal" -print -quit
     }
 
-    mkdir -p $out/share/hpc/mix/${name}
-    mkdir -p $out/share/hpc/tix/${name}
+    mkdir -p $out/share/hpc/mix/${identifier}
+    mkdir -p $out/share/hpc/tix/${identifier}
 
+    local src=${libraryCovered.src.outPath}
+
+    hpcMarkupCmdBase=("hpc" "markup" "--srcdir=$src")
     for drv in ${lib.concatStringsSep " " ([ libraryCovered ] ++ testsWithCoverage)}; do
       # Copy over mix files
       local mixDir=$(findMixDir $drv)
-      cp -R $mixDir/* $out/share/hpc/mix/${name}
+      echo "MIXDIR IS: $mixDir"
+      cp -R $mixDir $out/share/hpc/mix/
+
+      hpcMarkupCmdBase+=("--hpcdir=$mixDir")
     done
 
     # Exclude test modules from tix file
     excludedModules=('"Main"')
-    local drv=${libraryCovered.src.outPath}
     # Exclude test modules
-    local cabalFile=$(findCabalFile $drv)
+    local cabalFile=$(findCabalFile $src)
     for module in $(cq $cabalFile testModules | jq ".[]"); do
       excludedModules+=("$module")
     done
     echo "''${excludedModules[@]}"
 
-    hpcSumCmdBase=("hpc" "sum" "--union")
+    hpcSumCmdBase=("hpc" "sum" "--union" "--output=$out/share/hpc/tix/${identifier}/${identifier}.tix")
     for exclude in ''${excludedModules[@]}; do
       hpcSumCmdBase+=("--exclude=$exclude")
+      hpcMarkupCmdBase+=("--exclude=$exclude")
     done
 
-    for check in ${lib.concatStringsSep " " checks}; do
-      pushd $check/share/hpc/tix
+    hpcMarkupCmdAll=("''${hpcMarkupCmdBase[@]}" "--destdir=$out/share/hpc/html/${identifier}")
+
+    hpcSumCmd=("''${hpcSumCmdBase[@]}")
+    ${lib.concatStringsSep "\n" (builtins.map (check: ''
+      local hpcMarkupCmdEachTest=("''${hpcMarkupCmdBase[@]}" "--destdir=$out/share/hpc/html/${check.exeName}")
+
+      pushd ${check}/share/hpc/tix
+
+      tixFileRel="$(find . -iwholename "*.tix" -type f -print -quit)"
+      echo "TIXFILEREL: $tixFileRel"
+
+      # Output tix file as-is with suffix
+      mkdir -p $out/share/hpc/tix/$(dirname $tixFileRel)
+      cp $tixFileRel $out/share/hpc/tix/$tixFileRel
       
-      # Find each tix file (relative to check directory above)
-      for tixFileRel in $(find . -iwholename "*.tix" -type f); do
-        # Output tix file as-is with suffix
-        mkdir -p $out/share/hpc/tix/${name}/$(dirname $tixFileRel)
-        cp $tixFileRel $out/share/hpc/tix/${name}/$tixFileRel.pre-exclude
-        
-        # Output tix file with test modules excluded
-        local hpcSumCmd=("''${hpcSumCmdBase[@]}")
-        hpcSumCmd+=("--output=$out/share/hpc/tix/${name}/$tixFileRel" "$tixFileRel")
-        echo "''${hpcSumCmd[@]}"
-        eval "''${hpcSumCmd[@]}"
-      done
+      # Output tix file with test modules excluded
+      hpcSumCmd+=("$out/share/hpc/tix/$tixFileRel")
+
+      hpcMarkupCmdAll+=("$out/share/hpc/tix/$tixFileRel")
+      hpcMarkupCmdEachTest+=("$out/share/hpc/tix/$tixFileRel")
+
+      echo "''${hpcMarkupCmdEachTest[@]}"
+      eval "''${hpcMarkupCmdEachTest[@]}"
 
       popd
-    done
+    '') checks)
+    }
 
-    # hpcMarkupCmd=("hpc" "markup" "$tixFile" "--destdir=$out" "--srcdir=$src")
-    # for component in ; do
-    #   echo "COMPONENT IS $component"
-    #   local mixDir=$(findMixDir $component)
+    echo "''${hpcSumCmd[@]}"
+    eval "''${hpcSumCmd[@]}"
 
-    #   hpcMarkupCmd+=("--hpcdir=$mixDir")
-    #   cp -R $mixDir $out/share/hpc/mix
-    # done
-    # for exclude in ''${excludedModules[@]}; do
-    #   hpcMarkupCmd+=("--exclude=$exclude")
-    # done
-    # echo "''${hpcMarkupCmd[@]}"
-    # eval "''${hpcMarkupCmd[@]}"
+    echo "''${hpcMarkupCmdAll[@]}"
+    eval "''${hpcMarkupCmdAll[@]}"
 
-    # mkdir -p $out/share/hpc/tix/all
-    # cp $tixFile $out/share/hpc/tix/all/all.tix
-
-    # cp -r $src/* $out
   '';
 }

@@ -4,13 +4,14 @@ project:
 
 let
   coverageReports = lib.mapAttrsToList (n: package: package.coverageReport) project;
+  sources = lib.mapAttrsToList (n: package: package.src) project;
 in
 stdenv.mkDerivation {
   name = "coverage-report";
 
   phases = ["buildPhase"];
 
-  buildInputs = (with pkgs.haskellPackages; [
+  buildInputs = (with pkgs; [
     ghc
   ]);
 
@@ -38,7 +39,6 @@ stdenv.mkDerivation {
       cp -R $report/share/hpc/mix/* $out/share/hpc/mix
       cp -R $report/share/hpc/tix/* $out/share/hpc/tix
     done
-
     eval "''${hpcSumCmd[@]}"
   '';
 }

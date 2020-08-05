@@ -15,7 +15,7 @@ in stdenv.mkDerivation ({
   src = drv.source or (srcOnly drv);
 
   passthru = {
-    inherit (drv) identifier config configFiles executableToolDepends cleanSrc env;
+    inherit (drv) identifier config configFiles executableToolDepends cleanSrc env exeName;
   };
 
   inherit (drv) meta LANG LC_ALL buildInputs nativeBuildInputs;

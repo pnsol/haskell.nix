@@ -76,7 +76,6 @@ in stdenv.mkDerivation {
       # Output tix file with test modules excluded
       hpcSumCmd+=("$out/share/hpc/tix/$tixFileRel")
 
-      hpcMarkupCmdAll+=("$out/share/hpc/tix/$tixFileRel")
       hpcMarkupCmdEachTest+=("$out/share/hpc/tix/$tixFileRel")
 
       echo "''${hpcMarkupCmdEachTest[@]}"
@@ -85,6 +84,8 @@ in stdenv.mkDerivation {
       popd
     '') checks)
     }
+
+    hpcMarkupCmdAll+=("$out/share/hpc/tix/${identifier}/${identifier}.tix")
 
     echo "''${hpcSumCmd[@]}"
     eval "''${hpcSumCmd[@]}"

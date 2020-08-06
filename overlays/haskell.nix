@@ -494,13 +494,20 @@ final: prev: {
                   then null
                   else
                     let package = package' // { recurseForDerivations = false; };
-                    in package' // {
+                    in package' // rec {
                       components = final.lib.mapAttrs (n: v:
                         if n == "library" || n == "all"
                           then v // { inherit project package; }
                           else final.lib.mapAttrs (_: c: c // { inherit project package; }) v
                       ) package'.components;
                       inherit project;
+
+                      coverageReport = haskellLib.coverageReport {
+                        inherit (package.identifier) name version;
+                        inherit (components) library;
+                        tests = with final.lib; attrValues (filterAttrs (_: d: d.config.doCheck) components.tests);
+                        plan = project.pkg-set.config.packages."${package.identifier.name}";
+                      };
                     }
                 ) rawProject.hsPkgs
                 // {

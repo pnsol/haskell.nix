@@ -5,6 +5,53 @@ project:
 let
   coverageReports = lib.mapAttrsToList (n: package: package.coverageReport) project;
   sources = lib.mapAttrsToList (n: package: package.src) project;
+
+  packageTableRows = package: with lib;
+    let
+      testsOnly = filterAttrs (n: d: isDerivation d) package.components.tests;
+      testNames = mapAttrsToList (testName: _: testName) testsOnly;
+      firstPosition = 1;
+      positions = range firstPosition (length testNames);
+      testNamesWithPosition = zipLists positions testNames;
+      isFirst = pos: pos == firstPosition;
+    in
+      concatStringsSep "\n" (map (tuple:
+        let
+          pos = tuple.fst;
+          testName = tuple.snd;
+        in ''
+      <tr>
+        <td>
+          ${if isFirst pos then ''
+          <a href="${package.identifier.name}-${package.identifier.version}/hpc_index.html">${package.identifier.name}</href>
+          '' else ""} 
+        </td>
+        <td>
+          <a href="${testName}/hpc_index.html">${testName}</a>
+        </td>
+      </tr>
+    '') testNamesWithPosition);
+
+  projectIndexHtml = pkgs.writeText "index.html" ''
+  <html>
+    <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body>
+      <table border="1" width="100%">
+        <tbody>
+          <tr>
+            <th>Package</th>
+            <th>TestSuite</th>
+          </tr>
+
+          ${with lib; concatStringsSep "\n" (mapAttrsToList (_ : packageTableRows) project)}
+
+        </tbody>
+      </table>
+    </body>
+  </html>
+  '';
 in
 stdenv.mkDerivation {
   name = "coverage-report";
@@ -18,6 +65,7 @@ stdenv.mkDerivation {
   buildPhase = ''
     mkdir -p $out/share/hpc/tix/all
     mkdir -p $out/share/hpc/mix/
+    mkdir -p $out/share/hpc/html/
 
     findMixDir() {
       find $1 -iwholename "*/hpc/vanilla/mix" -exec find {} -maxdepth 1 -type d -iwholename "*/mix/*" \; -quit
@@ -40,10 +88,12 @@ stdenv.mkDerivation {
       # Copy mix and tix information over from each report
       cp -R $report/share/hpc/mix/* $out/share/hpc/mix
       cp -R $report/share/hpc/tix/* $out/share/hpc/tix
+      cp -R $report/share/hpc/html/* $out/share/hpc/html
     '') project)}
 
-    # TODO insert project-wide HTML page here
-
     eval "''${hpcSumCmd[@]}"
+
+    # TODO insert project-wide HTML page here
+    cp ${projectIndexHtml} $out/share/hpc/html/index.html
   '';
 }

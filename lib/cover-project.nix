@@ -3,9 +3,6 @@
 project:
 
 let
-  coverageReports = lib.mapAttrsToList (n: package: package.coverageReport) project;
-  sources = lib.mapAttrsToList (n: package: package.src) project;
-
   packageTableRows = package: with lib;
     let
       testsOnly = filterAttrs (n: d: isDerivation d) package.components.tests;

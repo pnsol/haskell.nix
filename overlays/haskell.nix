@@ -473,13 +473,14 @@ final: prev: {
                               { compiler.nix-name = args.compiler-nix-name; };
                   extra-hackages = args.extra-hackages or [];
                 };
-            in addProjectAndPackageAttrs rec {
-              inherit (pkg-set.config) hsPkgs;
-              inherit pkg-set;
-              plan-nix = callProjectResults.projectNix;
-              inherit (callProjectResults) index-state;
-
-              projectCoverageReport = haskellLib.projectCoverageReport (haskellLib.selectProjectPackages hsPkgs);
+                project = addProjectAndPackageAttrs rec {
+                  inherit (pkg-set.config) hsPkgs;
+                  inherit pkg-set;
+                  plan-nix = callProjectResults.projectNix;
+                  inherit (callProjectResults) index-state;
+                };
+            in project // {
+                projectCoverageReport = haskellLib.projectCoverageReport (haskellLib.selectProjectPackages project.hsPkgs);
             };
 
         # Take `hsPkgs` from the `rawProject` and update all the packages and
@@ -559,7 +560,7 @@ final: prev: {
         # selected file ends in a `.yaml` it is assumed to be for `stackProject`.
         # If niether `stack.yaml` nor `cabal.project` exist `cabalProject` is
         # used (as it will use a default `cabal.project`).
-        project' = { src, projectFileName ? null, ... }@args: 
+        project' = { src, projectFileName ? null, ... }@args:
           let
             dir = __readDir (src.origSrcSubDir or src);
             exists = fileName: builtins.elem (dir.${fileName} or "") ["regular" "symlink"];

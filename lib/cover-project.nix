@@ -3,6 +3,19 @@
 project:
 
 let
+
+  # Create table rows for an project coverage index page that look something like:
+  #
+  # | Package          | TestSuite |
+  # |------------------+-----------|
+  # | cardano-shell    | test-1    |
+  # |                  | test-2    |
+  # | cardano-launcher | test-1    |
+  # |                  | test-2    |
+  #
+  # The logic is a little complex to ensure that only the first test
+  # is listed alongside the package, the second test is accompanied by
+  # a blank 'Package' entry.
   packageTableRows = package: with lib;
     let
       testsOnly = filterAttrs (n: d: isDerivation d) package.components.tests;

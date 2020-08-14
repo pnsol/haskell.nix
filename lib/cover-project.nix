@@ -64,7 +64,7 @@ let
   '';
 in
 stdenv.mkDerivation {
-  name = "coverage-report";
+  name = "project-coverage-report";
 
   phases = ["buildPhase"];
 
@@ -88,12 +88,15 @@ stdenv.mkDerivation {
     # Create tix file with test run information for all packages
     tixFile="$out/share/hpc/tix/all/all.tix"
     hpcSumCmd=("hpc" "sum" "--union" "--output=$tixFile")
+    tixFiles=()
 
     ${with lib; concatStringsSep "\n" (mapAttrsToList (n: package: ''
       identifier="${package.identifier.name}-${package.identifier.version}"
       report=${package.coverageReport}
       tix="$report/share/hpc/tix/$identifier/$identifier.tix"
-      hpcSumCmd+=("$tix")
+      if test -f "$tix"; then
+        tixFiles+=("$tix")
+      fi
 
       # Copy mix and tix information over from each report
       cp -R $report/share/hpc/mix/* $out/share/hpc/mix
@@ -101,9 +104,12 @@ stdenv.mkDerivation {
       cp -R $report/share/hpc/html/* $out/share/hpc/html
     '') project)}
 
-    eval "''${hpcSumCmd[@]}"
+    if [ ''${#tixFiles[@]} -ne 0 ]; then
+      hpcSumCmd+=("''${tixFiles[@]}")
+      echo "''${hpcSumCmd[@]}"
+      eval "''${hpcSumCmd[@]}"
+    fi
 
-    # TODO insert project-wide HTML page here
     cp ${projectIndexHtml} $out/share/hpc/html/index.html
   '';
 }

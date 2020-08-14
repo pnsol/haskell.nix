@@ -32,6 +32,7 @@ in stdenv.mkDerivation {
 
     mkdir -p $out/share/hpc/mix/${identifier}
     mkdir -p $out/share/hpc/tix/${identifier}
+    mkdir -p $out/share/hpc/html/${identifier}
 
     local src=${libraryCovered.src.outPath}
 
@@ -44,49 +45,54 @@ in stdenv.mkDerivation {
       hpcMarkupCmdBase+=("--hpcdir=$mixDir")
     done
 
-    # Exclude test modules from tix file
-    excludedModules=('Main')
-    # Exclude test modules
-    local cabalFile=$(findCabalFile $src)
-    testModules="${with lib; concatStringsSep " " (foldl' (acc: test: acc ++ (getTestModulesFor test)) [] testsWithCoverage)}"
-    for module in $testModules; do
-      excludedModules+=("$module")
-    done
+    ${lib.optionalString ((builtins.length tests) > 0) ''
+      # Exclude test modules from tix file
+      excludedModules=('Main')
+      # Exclude test modules
+      local cabalFile=$(findCabalFile $src)
+      testModules="${with lib; concatStringsSep " " (foldl' (acc: test: acc ++ (getTestModulesFor test)) [] testsWithCoverage)}"
+      for module in $testModules; do
+        excludedModules+=("$module")
+      done
 
-    hpcSumCmdBase=("hpc" "sum" "--union" "--output=$out/share/hpc/tix/${identifier}/${identifier}.tix")
-    for exclude in ''${excludedModules[@]}; do
-      hpcSumCmdBase+=("--exclude=$exclude")
-      hpcMarkupCmdBase+=("--exclude=$exclude")
-    done
+      hpcSumCmdBase=("hpc" "sum" "--union" "--output=$out/share/hpc/tix/${identifier}/${identifier}.tix")
+      for exclude in ''${excludedModules[@]}; do
+        hpcSumCmdBase+=("--exclude=$exclude")
+        hpcMarkupCmdBase+=("--exclude=$exclude")
+      done
 
-    hpcMarkupCmdAll=("''${hpcMarkupCmdBase[@]}" "--destdir=$out/share/hpc/html/${identifier}")
+      hpcMarkupCmdAll=("''${hpcMarkupCmdBase[@]}" "--destdir=$out/share/hpc/html/${identifier}")
 
-    hpcSumCmd=("''${hpcSumCmdBase[@]}")
-    ${lib.concatStringsSep "\n" (builtins.map (check: ''
-      local hpcMarkupCmdEachTest=("''${hpcMarkupCmdBase[@]}" "--destdir=$out/share/hpc/html/${check.exeName}")
+      hpcSumCmd=("''${hpcSumCmdBase[@]}")
+      ${lib.concatStringsSep "\n" (builtins.map (check: ''
+        local hpcMarkupCmdEachTest=("''${hpcMarkupCmdBase[@]}" "--destdir=$out/share/hpc/html/${check.exeName}")
 
-      pushd ${check}/share/hpc/tix
+        pushd ${check}/share/hpc/tix
 
-      tixFileRel="$(find . -iwholename "*.tix" -type f -print -quit)"
+        tixFileRel="$(find . -iwholename "*.tix" -type f -print -quit)"
 
-      mkdir -p $out/share/hpc/tix/$(dirname $tixFileRel)
-      cp $tixFileRel $out/share/hpc/tix/$tixFileRel
-      
-      # Output tix file with test modules excluded
-      hpcSumCmd+=("$out/share/hpc/tix/$tixFileRel")
+        mkdir -p $out/share/hpc/tix/$(dirname $tixFileRel)
+        cp $tixFileRel $out/share/hpc/tix/$tixFileRel
 
-      hpcMarkupCmdEachTest+=("$out/share/hpc/tix/$tixFileRel")
+        # Output tix file with test modules excluded
+        hpcSumCmd+=("$out/share/hpc/tix/$tixFileRel")
 
-      eval "''${hpcMarkupCmdEachTest[@]}"
+        hpcMarkupCmdEachTest+=("$out/share/hpc/tix/$tixFileRel")
 
-      popd
-    '') checks)
-    }
+        echo "''${hpcMarkupCmdEachTest[@]}"
+        eval "''${hpcMarkupCmdEachTest[@]}"
 
-    hpcMarkupCmdAll+=("$out/share/hpc/tix/${identifier}/${identifier}.tix")
+        popd
+      '') checks)
+      }
 
-    eval "''${hpcSumCmd[@]}"
+      hpcMarkupCmdAll+=("$out/share/hpc/tix/${identifier}/${identifier}.tix")
 
-    eval "''${hpcMarkupCmdAll[@]}"
+      echo "''${hpcSumCmd[@]}"
+      eval "''${hpcSumCmd[@]}"
+
+      echo "''${hpcMarkupCmdAll[@]}"
+      eval "''${hpcMarkupCmdAll[@]}"
+    ''}
   '';
 }

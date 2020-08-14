@@ -2,9 +2,6 @@
 
 { name, version, library, tests, plan }:
 
-# nix-repl> haskellPackages.cardano-launcher.project.pkg-set.config.packages.cardano-launcher.components.tests.cardano-launcher-test.modules
-# plan.components.tests.cardano-launcher-test.modules
-
 let
   buildWithCoverage = builtins.map (d: d.covered);
   runCheck = builtins.map (d: haskellLib.check d);
@@ -42,7 +39,6 @@ in stdenv.mkDerivation {
     for drv in ${lib.concatStringsSep " " ([ libraryCovered ] ++ testsWithCoverage)}; do
       # Copy over mix files
       local mixDir=$(findMixDir $drv)
-      echo "MIXDIR IS: $mixDir"
       cp -R $mixDir $out/share/hpc/mix/
 
       hpcMarkupCmdBase+=("--hpcdir=$mixDir")
@@ -56,7 +52,6 @@ in stdenv.mkDerivation {
     for module in $testModules; do
       excludedModules+=("$module")
     done
-    echo "Excluded modules: ''${excludedModules[@]}"
 
     hpcSumCmdBase=("hpc" "sum" "--union" "--output=$out/share/hpc/tix/${identifier}/${identifier}.tix")
     for exclude in ''${excludedModules[@]}; do
@@ -73,9 +68,7 @@ in stdenv.mkDerivation {
       pushd ${check}/share/hpc/tix
 
       tixFileRel="$(find . -iwholename "*.tix" -type f -print -quit)"
-      echo "TIXFILEREL: $tixFileRel"
 
-      # Output tix file as-is with suffix
       mkdir -p $out/share/hpc/tix/$(dirname $tixFileRel)
       cp $tixFileRel $out/share/hpc/tix/$tixFileRel
       
@@ -84,7 +77,6 @@ in stdenv.mkDerivation {
 
       hpcMarkupCmdEachTest+=("$out/share/hpc/tix/$tixFileRel")
 
-      echo "''${hpcMarkupCmdEachTest[@]}"
       eval "''${hpcMarkupCmdEachTest[@]}"
 
       popd
@@ -93,11 +85,8 @@ in stdenv.mkDerivation {
 
     hpcMarkupCmdAll+=("$out/share/hpc/tix/${identifier}/${identifier}.tix")
 
-    echo "''${hpcSumCmd[@]}"
     eval "''${hpcSumCmd[@]}"
 
-    echo "''${hpcMarkupCmdAll[@]}"
     eval "''${hpcMarkupCmdAll[@]}"
-
   '';
 }

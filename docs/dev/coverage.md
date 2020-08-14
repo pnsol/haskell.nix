@@ -51,11 +51,19 @@ The coverage information generated will look something like this:
         │       └── my-test-1.tix
         └── html
             ├── my-library-0.1.0.0
+            │   ├── my-library-0.1.0.0-ERSaOroBZhe9awsoBkhmcV
+            │   │   ├── My.Lib.Config.hs.html
+            │   │   ├── My.Lib.Types.hs.html
+            │   │   └── My.Lib.Util.hs.html
             │   ├── hpc_index_alt.html
             │   ├── hpc_index_exp.html
             │   ├── hpc_index_fun.html
             │   └── hpc_index.html
             └── my-test-1
+                ├── my-library-0.1.0.0-ERSaOroBZhe9awsoBkhmcV
+                │   ├── My.Lib.Config.hs.html
+                │   ├── My.Lib.Types.hs.html
+                │   └── My.Lib.Util.hs.html
                 ├── hpc_index_alt.html
                 ├── hpc_index_exp.html
                 ├── hpc_index_fun.html

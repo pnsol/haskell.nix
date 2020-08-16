@@ -72,6 +72,7 @@ pkgs:
      boost_wserialization = pkgs.boost;
      tensorflow = pkgs.libtensorflow;
      opencv = pkgs.opencv3;
+     pcap = pkgs.libpcap;
      icuuc = pkgs.icu;
      icui18n = pkgs.icu;
      icudata = pkgs.icu;
